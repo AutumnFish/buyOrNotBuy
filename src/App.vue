@@ -12,6 +12,8 @@ export default {
 </script>
 
 <style>
+  /* 导入演示 */
+  @import url('../static/iconfont.wxss');
 .container {
   height: 100%;
   display: flex;
