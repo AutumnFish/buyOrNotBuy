@@ -7,10 +7,10 @@
 		"minified": true,
 		"newFeature": true
 	},
-	"miniprogramRoot": "./dist/",
+	"miniprogramRoot": "dist/",
 	"compileType": "miniprogram",
-	"appid": "touristappid",
-	"projectname": "whitebuy",
+	"appid": "wxd9450c347c94d495",
+	"projectname": "%E7%88%B1%E4%B9%B0%E4%B8%8D%E4%B9%B0",
 	"condition": {
 		"search": {
 			"current": -1,

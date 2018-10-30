@@ -196,12 +196,6 @@ $uRed: #ff2d4a;
   }
 }
 
-<<<<<<< HEAD
-<style scoped>
-  div{
-    background-color: skyblue;
-  }
-=======
 // 楼层布局
 .floor-box{
   .section{
@@ -278,5 +272,4 @@ $uRed: #ff2d4a;
 swiper image{
   width: 100%;
 }
->>>>>>> dev
 </style>
