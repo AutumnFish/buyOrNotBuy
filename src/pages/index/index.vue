@@ -1,11 +1,6 @@
 <template>
   <div class="index-container">
-    <!-- 搜索框 -->
-    <div class="search-box">
-      <input type="text" placeholder="搜索">
-      <icon type="search" size="14">
-      </icon>
-    </div>
+    <searchBar></searchBar>
     <!-- 轮播图 -->
     <swiper indicator-dots autoplay circular>
       <swiper-item v-for="(item, index) in swiperList" :key="index">
@@ -55,6 +50,9 @@
 <script>
 // 导入模块
 import tools from "../../utils/tools";
+
+// 导入自定义组件
+import searchBar from "../../components/searchBar";
 // console.log(tools);
 export default {
   data() {
@@ -70,6 +68,11 @@ export default {
       // 回到顶部是否显示
       showTop:false
     };
+  },
+  // 注册组件
+  components:{
+    // 注册
+    searchBar
   },
   methods: {
     toTop(){
@@ -132,9 +135,7 @@ export default {
 <style scoped lang="scss">
 // 定义变量
 $uRed: #ff2d4a;
-.index-container {
-  padding-top: 100rpx;
-}
+
 // 顶部的搜索栏
 .search-box {
   height: 100rpx;

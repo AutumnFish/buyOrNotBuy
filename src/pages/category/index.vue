@@ -1,9 +1,13 @@
 <template>
-  <div>分类</div>
+  <div>
+    <!-- 搜索框 -->
+    <searchBar></searchBar>
+  </div>
 </template>
 
 <script>
-
+// 导入组件
+import searchBar from '../../components/searchBar.vue';
 
 export default {
   data () {
@@ -11,7 +15,10 @@ export default {
    
     }
   },
-
+  // 注册组件
+  components:{
+    searchBar
+  },
 
   methods: {
     
