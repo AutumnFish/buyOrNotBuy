@@ -1,17 +1,24 @@
 <template>
         <!-- 搜索框 -->
     <div class="search-box">
-      <input type="text" placeholder="搜索">
+      <input @click="toSearch" type="text" placeholder="搜索">
       <icon type="search" size="14">
       </icon>
     </div>
 </template>
 <script>
 export default {
-    
+    methods:{
+      toSearch(){
+        // 代码跳转页面 编程式导航
+        wx.navigateTo({ url: '/pages/search/main' });
+      }
+    }
 }
 </script>
-<style lang="scss" >
+
+<style scoped lang="scss" >
+// 增加 scoped 让这个样式 该组件 独有
 // 定义变量
 $uRed: #ff2d4a;
 // 设置顶部的padding
