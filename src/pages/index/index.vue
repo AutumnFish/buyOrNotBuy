@@ -136,6 +136,11 @@ export default {
 // 定义变量
 $uRed: #ff2d4a;
 
+// 使用padding 把内容往下压
+.index-container{
+  padding-top: 100rpx;
+}
+
 // 顶部的搜索栏
 .search-box {
   height: 100rpx;
