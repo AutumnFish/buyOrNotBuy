@@ -8,6 +8,7 @@ function myPro(options){
           data: options.data||'data', //请求的参数",
           method: options.method||'GET',
           dataType: options.dataType||'json', //如果设为json，会尝试对返回的数据做一次 JSON.parse
+          header:options.header||{},
           success: resolve,
           fail: reject,
           complete: () => {}

@@ -1,15 +1,15 @@
 <template>
   <div>
     <!-- 没有数据的盒子 -->
-    <div v-show="cartData==undefined" class="empty">
+    <div v-show="goodsList.length==0" class="empty">
       <span class="iconfont icon-gouwuche"></span>
       <p>你好没有添加任何商品</p>
     </div>
     <!-- 有数据的盒子 -->
-    <div v-show="cartData!=undefined" class="full">
+    <div v-show="goodsList.length!=0" class="full">
       <!-- 顶部的地址 -->
       <div class="address-box">
-        <div class="item">
+        <div class="item" @click="chooseAddress">
           <span class="person">收货人:&nbsp;&nbsp;&nbsp;&nbsp;{{person}}</span>
           <span class="mobile">{{mobile}}&nbsp;&nbsp;&nbsp;&nbsp;
             <span class="iconfont icon-jiantouyou"></span>
@@ -64,16 +64,21 @@
           </div>
           <div class="bottom">包含运费</div>
         </div>
-        <button>结算({{totalNum}})</button>
+        <button @click="payOrder">结算({{totalNum}})</button>
       </div>
 
     </div>
+    <!-- 弹框 -->
+    <toast message="没钱找他呀!" :img="img" :visible.sync="visible"></toast>
   </div>
 </template>
 
 <script>
 // 导入 工具函数
 import tools from "../../utils/tools";
+// 导入弹框组件
+import toast from "mpvue-toast";
+import img from "../../../static/icon/wang.png";
 
 export default {
   data() {
@@ -87,29 +92,37 @@ export default {
       // 商品数据
       goodsList: [],
       // 是否被全选
-      isCheckAll:true
+      isCheckAll: true,
+      // 是否显示
+      visible: false,
+      // 图片
+      img
     };
   },
-  computed:{
-    totalPrice(){
+  // 注册组件
+  components: {
+    toast
+  },
+  computed: {
+    totalPrice() {
       // 遍历找到所有被选中的 求和
       let totalPrice = 0;
-      this.goodsList.forEach(v=>{
-        if(v.selected==true){
-          totalPrice+=(v.buyCount*v.goods_price);
+      this.goodsList.forEach(v => {
+        if (v.selected == true) {
+          totalPrice += v.buyCount * v.goods_price;
         }
-      })
+      });
       return totalPrice;
     },
     // 总个数
-    totalNum(){
-       // 遍历找到所有被选中的 求和
+    totalNum() {
+      // 遍历找到所有被选中的 求和
       let totalNum = 0;
-      this.goodsList.forEach(v=>{
-        if(v.selected==true){
-          totalNum+=v.buyCount;
+      this.goodsList.forEach(v => {
+        if (v.selected == true) {
+          totalNum += v.buyCount;
         }
-      })
+      });
       return totalNum;
     }
   },
@@ -136,6 +149,14 @@ export default {
           confirmColor: "#3CC51F", //确定按钮的文字颜色,
           success: res => {
             if (res.confirm) {
+              // 删除data中的商品数据
+              delete this.cartData[this.goodsList[index].goods_id];
+              // console.log(this.cartData);
+              // 删除缓存中的数据
+              wx.setStorage({
+                key: "cartData",
+                data: this.cartData
+              });
               // console.log('用户点击确定')
               this.goodsList.splice(index, 1);
             } else if (res.cancel) {
@@ -147,15 +168,191 @@ export default {
       }
     },
     add(index) {
+      // 修改goodsList的数组
       this.goodsList[index].buyCount++;
+      // 同步修改cartData的数据 通过商品id 获取 对应的个数
+      this.cartData[this.goodsList[index].goods_id]++;
+
+      // 缓存数据
+      wx.setStorage({
+        key: "cartData",
+        data: this.cartData
+      });
     },
     // 全选
-    checkAll(){
-      this.isCheckAll =!this.isCheckAll;
+    checkAll() {
+      this.isCheckAll = !this.isCheckAll;
       // 设置每一项 跟全选的状态一致
-      this.goodsList.forEach(v=>{
+      this.goodsList.forEach(v => {
         v.selected = this.isCheckAll;
-      })
+      });
+    },
+    // 地址选择
+    chooseAddress() {
+      // 调用地址选择api
+      wx.chooseAddress({
+        success: res => {
+          console.log(res.userName);
+          console.log(res.postalCode);
+          console.log(res.provinceName);
+          console.log(res.cityName);
+          console.log(res.countyName);
+          console.log(res.detailInfo);
+          console.log(res.nationalCode);
+          console.log(res.telNumber);
+          // 缓存地址信息
+          wx.setStorage({
+            key: "address",
+            data: res
+          });
+          // 设置地址信息
+          this.person = res.userName;
+          this.mobile = res.telNumber;
+          this.address = res.provinceName + res.cityName + res.countyName;
+        }
+      });
+    },
+    // 支付
+    payOrder() {
+      // 判断是否登录
+      wx.getStorage({
+        key: "token",
+        success: res => {
+          // console.log(res.data);
+          // 保存token
+          let token = res.data;
+          // 如果有数据 说明登录了
+          // 发起支付
+          // 提交支付 需要执行拼接订单数据
+          let goods = [];
+          this.goodsList.forEach(v => {
+            goods.push({
+              // 商品id
+              goods_id: v.goods_id,
+              // 购买数量
+              goods_number: v.buyCount,
+              goods_price: v.goods_price
+            });
+          });
+
+          // 提交订单
+          tools
+            .myPro({
+              url: tools.baseUrl + "api/public/v1/my/orders/create",
+              method: "post",
+              // 使用请求头带上token
+              header: {
+                Authorization: token
+              },
+              // 数据还是在data中
+              data: {
+                // 通过计算属性获取总价格
+                order_price: this.totalPrice,
+                consignee_addr: this.address,
+                // 快速赋值
+                goods
+              }
+            })
+            // 提交订单
+            .then(result => {
+              // 订单创建成功
+              console.log(result);
+              // 清空购物车 删除选中的那些值
+              for (let i = this.goodsList.length - 1; i >= 0; i--) {
+                // 选中状态为 true 删掉
+                console.log(i);
+                if (this.goodsList[i].selected == true) {
+                  // 删除对象中的数据
+                  delete this.cartData[this.goodsList[i].goods_id];
+                  // 删除数组的数据
+                  this.goodsList.splice(i, 1);
+                }
+              }
+              // 保存到缓存中
+              wx.setStorage({
+                key: "cartData",
+                data: this.cartData
+              });
+
+              // 遍历完毕之后 就删除了 被选中的那些商品
+              // 已经获取订单号了 发起支付
+              return tools.myPro({
+                url: tools.baseUrl + "api/public/v1/my/orders/req_unifiedorder",
+                method: "post",
+                header: {
+                  Authorization: token
+                },
+                data: {
+                  order_number: result.data.message.order_number
+                }
+              });
+            })
+            // 微信支付
+            .then(result => {
+              // console.log(result);
+              // 发起微信支付
+              wx.requestPayment({
+                timeStamp: result.data.message.wxorder.timeStamp, //时间戳从1970年1月1日00:00:00至今的秒数,即当前的时间,
+                nonceStr: result.data.message.wxorder.nonceStr, //随机字符串，长度为32个字符以下,
+                package: result.data.message.wxorder.package, //统一下单接口返回的 prepay_id 参数值，提交格式如：prepay_id=*,
+                signType: "MD5", //签名算法，暂支持 MD5,
+                paySign: result.data.message.wxorder.paySign, //签名,具体签名方案参见小程序支付接口文档,
+                success: res => {
+                  // console.log(res);
+                  // 如果能够进到这里 说明支付成功
+                  if (res.errMsg == "requestPayment:ok") {
+                    // 搞定了
+                    // 提示用户
+                    wx.showToast({
+                      title: "支付成功!马上发货", //提示的内容,
+                      icon: "success", //图标,
+                      duration: 2000, //延迟时间,
+                      mask: true, //显示透明蒙层，防止触摸穿透,
+                      success: res => {}
+                    });
+                  }
+                },
+                fail: () => {
+                  // 支付失败 提示用户
+                  // console.log('支付失败');
+                  // wx.showToast({
+                  //   title: "没钱找我呀!", //提示的内容,
+                  //   image: "/static/icon/vip.png",
+                  //   duration: 2000, //延迟时间,
+                  //   mask: true, //显示透明蒙层，防止触摸穿透,
+                  //   success: res => {}
+                  // });
+                  // 修改控制的字段
+                  this.visible = !this.visible;
+                },
+                complete: () => {}
+              });
+            });
+        },
+        fail: () => {
+          // 没有登录
+          wx.showModal({
+            title: "提示", //提示的标题,
+            content: "哥们先登录", //提示的内容,
+            showCancel: true, //是否显示取消按钮,
+            cancelText: "先不登", //取消按钮的文字，默认为取消，最多 4 个字符,
+            cancelColor: "#000000", //取消按钮的文字颜色,
+            confirmText: "去登录", //确定按钮的文字，默认为取消，最多 4 个字符,
+            confirmColor: "#3CC51F", //确定按钮的文字颜色,
+            success: res => {
+              if (res.confirm) {
+                console.log("用户点击确定");
+                // 弹框提示
+                // 判断登录 先不做 直接去登录页
+                wx.switchTab({ url: "/pages/mine/main" });
+              } else if (res.cancel) {
+                console.log("用户点击取消");
+              }
+            }
+          });
+        },
+        complete: () => {}
+      });
     }
   },
 
@@ -245,7 +442,7 @@ export default {
   }
 };
 </script>
-<style scoped lang="scss">
+<style  scoped lang="scss">
 // 购物车空的演示
 .empty {
   .iconfont {
@@ -308,8 +505,7 @@ export default {
       border-bottom: 2rpx solid gray;
       .iconfont {
       }
-    }
-    // 每一个小区域
+    } // 每一个小区域
     .item {
       display: flex;
       height: 205rpx;
@@ -388,7 +584,7 @@ export default {
     }
   }
   // 底部的控制区域
-  .bottom-box{
+  .bottom-box {
     display: flex;
     height: 100rpx;
     background-color: white;
@@ -396,39 +592,44 @@ export default {
     left: 0;
     bottom: 0;
     width: 100%;
-    .item{
+    .item {
       // 单选框
-      font-size:30rpx;
-      flex:1;
-      &:first-child{
+      font-size: 30rpx;
+      flex: 1;
+      &:first-child {
         line-height: 100rpx;
         padding-left: 25rpx;
       }
-      &:nth-child(2){
+      &:nth-child(2) {
         padding-top: 15rpx;
       }
-      ._input{}
-      .top{
+      ._input {
+      }
+      .top {
         margin-bottom: 6rpx;
-        >._span{
-          color:#eb4450;
-          font-size:24rpx;
-          .price{
-            font-size:30rpx;
+        > ._span {
+          color: #eb4450;
+          font-size: 24rpx;
+          .price {
+            font-size: 30rpx;
           }
         }
       }
-      .bottom{
-        font-size:24rpx;
-        color:#ccc;
+      .bottom {
+        font-size: 24rpx;
+        color: #ccc;
       }
     }
-    button{
-      flex:1;
+    button {
+      flex: 1;
       background-color: #eb4450;
-      color:white;
+      color: white;
     }
   }
 }
-//
+// 修改弹框的大小
+.toast-img-wrapper .toast-img._img {
+  width: 400rpx;
+  height: 400rpx;
+}
 </style>
