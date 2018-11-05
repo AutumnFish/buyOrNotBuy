@@ -40,7 +40,7 @@
             <span>
               订单号:{{item.order_number}}
             </span>
-            <button>支付</button>
+            <button @click="payOrder(item.order_number) ">支付</button>
           </div>
         </div>
       </div>
@@ -74,6 +74,35 @@ export default {
     // 切换索引
     changeIndex(index) {
       this.selectIndex = index;
+    },
+    // s提交订单
+    payOrder(order_number){
+      // 获取token
+      let token = wx.getStorageSync('token');
+      // d调用接口
+      tools.myPro({
+        url:tools.baseUrl+"api/public/v1/my/orders/req_unifiedorder",
+        header:{
+          "Authorization" : token 
+        },
+        data:{
+          order_number
+        },
+        method:'post'
+      }).then(result=>{
+        // console.log(result);
+        // 发起微信支付
+        wx.requestPayment({
+          timeStamp:result.data.message.wxorder.timeStamp, //时间戳从1970年1月1日00:00:00至今的秒数,即当前的时间,
+          nonceStr:result.data.message.wxorder.nonceStr, //随机字符串，长度为32个字符以下,
+          package:result.data.message.wxorder.package, //统一下单接口返回的 prepay_id 参数值，提交格式如：prepay_id=*,
+          paySign:result.data.message.wxorder.paySign, //签名,具体签名方案参见小程序支付接口文档,
+          signType: 'MD5', //签名算法，暂支持 MD5,
+          success: res => {},
+          fail: () => {},
+          complete: () => {}
+        });
+      })
     }
   },
 
